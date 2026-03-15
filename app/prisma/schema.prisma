@@ -1,0 +1,224 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── FAMILY ─────────────────────────────────────────────
+
+model Family {
+  id         String   @id @default(cuid())
+  name       String
+  inviteCode String   @unique @default(cuid())
+  tvToken    String   @unique @default(cuid()) // for TV/kiosk dashboard
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  members User[]
+  chores  Chore[]
+}
+
+// ─── USER ───────────────────────────────────────────────
+
+enum UserRole {
+  PARENT
+  CHILD
+}
+
+model User {
+  id           String   @id @default(cuid())
+  familyId     String
+  name         String
+  role         UserRole
+  age          Int?
+  email        String?  @unique
+  passwordHash String?
+  pin          String?  // 4-digit hashed PIN for kids
+  avatarId     Int      @default(1) // 1-16 avatar selection
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  family             Family          @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  wallet             Wallet?
+  createdChores      Chore[]         @relation("ChoreCreator")
+  assignedChores     Chore[]         @relation("ChoreAssignee")
+  claimedInstances   ChoreInstance[] @relation("InstanceClaimer")
+  assignedInstances  ChoreInstance[] @relation("InstanceAssignee")
+  savingsGoals       SavingsGoal[]
+  investments        Investment[]
+
+  @@index([familyId])
+}
+
+// ─── CHORES ─────────────────────────────────────────────
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum Recurrence {
+  ONCE
+  DAILY
+  WEEKLY
+  MONTHLY
+  CUSTOM
+}
+
+model Chore {
+  id               String     @id @default(cuid())
+  familyId         String
+  createdById      String
+  title            String
+  description      String?
+  dollarValue      Float
+  estimatedMinutes Int?
+  difficulty       Difficulty @default(MEDIUM)
+  recurrence       Recurrence @default(ONCE)
+  recurrenceRule   String?    // cron-like rule for CUSTOM
+  categoryIcon     String?    // icon identifier
+  photoUrl         String?    // reference photo for the chore
+  assignedToId     String?    // null = open pool
+  isActive         Boolean    @default(true)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  family     Family          @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  createdBy  User            @relation("ChoreCreator", fields: [createdById], references: [id])
+  assignedTo User?           @relation("ChoreAssignee", fields: [assignedToId], references: [id])
+  instances  ChoreInstance[]
+
+  @@index([familyId])
+  @@index([assignedToId])
+}
+
+enum ChoreStatus {
+  AVAILABLE
+  CLAIMED
+  IN_PROGRESS
+  SUBMITTED
+  APPROVED
+  REJECTED
+  REDO
+}
+
+model ChoreInstance {
+  id               String      @id @default(cuid())
+  choreId          String
+  assignedToId     String?
+  claimedById      String?
+  status           ChoreStatus @default(AVAILABLE)
+  dueDate          DateTime?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  timeSpentSeconds Int?
+  proofPhotoUrl    String?
+  parentNote       String?
+  bonusAmount      Float?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  chore       Chore         @relation(fields: [choreId], references: [id], onDelete: Cascade)
+  assignedTo  User?         @relation("InstanceAssignee", fields: [assignedToId], references: [id])
+  claimedBy   User?         @relation("InstanceClaimer", fields: [claimedById], references: [id])
+  transactions Transaction[]
+
+  @@index([choreId])
+  @@index([claimedById])
+  @@index([status])
+}
+
+// ─── WALLET & TRANSACTIONS ─────────────────────────────
+
+model Wallet {
+  id               String  @id @default(cuid())
+  userId           String  @unique
+  availableBalance Float   @default(0)
+  savedBalance     Float   @default(0)
+  investedBalance  Float   @default(0)
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+}
+
+enum TransactionType {
+  EARNING
+  SAVING
+  SPENDING
+  INVESTMENT
+  MATURATION
+  BONUS
+  MATCH
+}
+
+model Transaction {
+  id              String          @id @default(cuid())
+  walletId        String
+  type            TransactionType
+  amount          Float
+  description     String
+  choreInstanceId String?
+  investmentId    String?
+  savingsGoalId   String?
+  createdAt       DateTime        @default(now())
+
+  wallet        Wallet         @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  choreInstance ChoreInstance? @relation(fields: [choreInstanceId], references: [id])
+  investment    Investment?    @relation(fields: [investmentId], references: [id])
+  savingsGoal   SavingsGoal?   @relation(fields: [savingsGoalId], references: [id])
+
+  @@index([walletId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ─── SAVINGS GOALS ──────────────────────────────────────
+
+model SavingsGoal {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String
+  targetAmount    Float
+  currentAmount   Float    @default(0)
+  imageUrl        String?
+  parentMatchRate Float?   // e.g. 0.5 = $0.50 per $1 saved
+  isCompleted     Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+}
+
+// ─── INVESTMENTS ────────────────────────────────────────
+
+enum InvestmentStatus {
+  ACTIVE
+  MATURED
+  WITHDRAWN
+}
+
+model Investment {
+  id              String           @id @default(cuid())
+  userId          String
+  principalAmount Float
+  status          InvestmentStatus @default(ACTIVE)
+  lockDays        Int              // 7, 14, or 30
+  maturationDate  DateTime
+  returnAmount    Float?           // set by parent when matured
+  parentNote      String?
+  createdAt       DateTime         @default(now())
+  maturedAt       DateTime?
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([maturationDate])
+}
