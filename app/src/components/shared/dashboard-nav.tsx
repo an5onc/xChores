@@ -10,27 +10,38 @@ const AVATARS = [
   "🦄", "🐲", "🦋", "🐢", "🐬", "🦜", "🐶", "🐱",
 ];
 
+// Mobile bottom bar shows first 6, desktop shows all
 const parentLinks = [
-  { href: "/parent", label: "Dashboard", icon: "📊" },
-  { href: "/parent/chores", label: "Chores", icon: "📋" },
-  { href: "/parent/review", label: "Review", icon: "✅" },
-  { href: "/parent/family", label: "Family", icon: "👨‍👩‍👧‍👦" },
-  { href: "/parent/store", label: "Store", icon: "🛍️" },
-  { href: "/parent/bids", label: "Bids", icon: "🏷️" },
-  { href: "/parent/ledger", label: "Ledger", icon: "📒" },
-  { href: "/parent/investments", label: "Invest", icon: "📈" },
-  { href: "/parent/reports", label: "Reports", icon: "📊" },
+  // Primary (mobile bottom bar)
+  { href: "/parent", label: "Dashboard", icon: "📊", primary: true },
+  { href: "/parent/chores", label: "Chores", icon: "📋", primary: true },
+  { href: "/parent/review", label: "Review", icon: "✅", primary: true },
+  { href: "/parent/family", label: "Family", icon: "👨‍👩‍👧‍👦", primary: true },
+  { href: "/parent/ledger", label: "Ledger", icon: "📒", primary: true },
+  { href: "/parent/settings", label: "Settings", icon: "⚙️", primary: true },
+  // Secondary (desktop only)
+  { href: "/parent/store", label: "Store", icon: "🛍️", primary: false },
+  { href: "/parent/bids", label: "Bids", icon: "🏷️", primary: false },
+  { href: "/parent/investments", label: "Invest", icon: "📈", primary: false },
+  { href: "/parent/allowance", label: "Allowance", icon: "💸", primary: false },
+  { href: "/parent/calendar", label: "Calendar", icon: "📅", primary: false },
+  { href: "/parent/leaderboard", label: "Leaders", icon: "🏆", primary: false },
+  { href: "/parent/reports", label: "Reports", icon: "📊", primary: false },
+  { href: "/parent/export", label: "Export", icon: "📤", primary: false },
 ];
 
 const kidLinks = [
-  { href: "/kid", label: "Home", icon: "🏠" },
-  { href: "/kid/chores", label: "Chores", icon: "📋" },
-  { href: "/kid/wallet", label: "Wallet", icon: "💰" },
-  { href: "/kid/savings", label: "Savings", icon: "🎯" },
-  { href: "/kid/store", label: "Store", icon: "🛍️" },
-  { href: "/kid/marketplace", label: "Market", icon: "🏪" },
-  { href: "/kid/investments", label: "Invest", icon: "🌱" },
-  { href: "/kid/achievements", label: "Badges", icon: "🏅" },
+  // Primary (mobile bottom bar)
+  { href: "/kid", label: "Home", icon: "🏠", primary: true },
+  { href: "/kid/chores", label: "Chores", icon: "📋", primary: true },
+  { href: "/kid/wallet", label: "Wallet", icon: "💰", primary: true },
+  { href: "/kid/savings", label: "Savings", icon: "🎯", primary: true },
+  { href: "/kid/store", label: "Store", icon: "🛍️", primary: true },
+  { href: "/kid/achievements", label: "Badges", icon: "🏅", primary: true },
+  // Secondary (desktop only)
+  { href: "/kid/marketplace", label: "Market", icon: "🏪", primary: false },
+  { href: "/kid/investments", label: "Invest", icon: "🌱", primary: false },
+  { href: "/kid/leaderboard", label: "Leaders", icon: "🏆", primary: false },
 ];
 
 interface DashboardUser {
@@ -99,10 +110,10 @@ export function DashboardNav({ user }: { user: DashboardUser }) {
         </div>
       </nav>
 
-      {/* Mobile bottom tab bar */}
+      {/* Mobile bottom tab bar — primary links only */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white pb-safe md:hidden">
         <div className="flex items-stretch justify-around">
-          {links.map((link) => (
+          {links.filter((l) => l.primary).map((link) => (
             <Link
               key={link.href}
               href={link.href}
