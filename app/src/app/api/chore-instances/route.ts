@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { checkAchievements } from "@/lib/achievements";
+import { createNotification, notifyParents } from "@/lib/notifications";
+import { updateStreak, awardStreakBonus } from "@/lib/streaks";
 
 // GET: List chore instances for the user
 export async function GET() {
@@ -98,6 +100,21 @@ export async function PATCH(req: NextRequest) {
           proofPhotoUrl: proofPhotoUrl || null,
         },
       });
+
+      // Notify parents about the submission
+      const claimedUser = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: { name: true, familyId: true },
+      });
+      if (claimedUser?.familyId) {
+        await notifyParents(claimedUser.familyId, {
+          type: "chore_submitted",
+          title: "Chore submitted!",
+          message: `${claimedUser.name} submitted ${instance.chore.title}`,
+          metadata: { instanceId, choreId: instance.choreId },
+        });
+      }
+
       return NextResponse.json(updated);
     }
 
@@ -136,10 +153,32 @@ export async function PATCH(req: NextRequest) {
         }),
       ]);
 
+      // Notify child about approval
+      await createNotification({
+        userId: instance.claimedById!,
+        type: "chore_approved",
+        title: "Chore approved!",
+        message: `Your chore '${instance.chore.title}' was approved! You earned $${payout.toFixed(2)}`,
+        metadata: { instanceId, choreId: instance.choreId, payout },
+      });
+
       // Check for newly unlocked achievements
       const newAchievements = await checkAchievements(instance.claimedById!);
 
-      return NextResponse.json({ ...updated, newAchievements });
+      // Check and update streak
+      const streak = await updateStreak(instance.claimedById!);
+      if (streak.isNewMilestone && streak.milestoneBonus > 0) {
+        await awardStreakBonus(instance.claimedById!, streak.currentStreak, streak.milestoneBonus);
+        await createNotification({
+          userId: instance.claimedById!,
+          type: "streak",
+          title: `🔥 ${streak.currentStreak}-day streak!`,
+          message: `You've been doing chores ${streak.currentStreak} days in a row! Bonus: $${streak.milestoneBonus.toFixed(2)}`,
+          metadata: { streak: streak.currentStreak, bonus: streak.milestoneBonus },
+        });
+      }
+
+      return NextResponse.json({ ...updated, newAchievements, streak });
     }
 
     case "reject": {
@@ -150,6 +189,18 @@ export async function PATCH(req: NextRequest) {
         where: { id: instanceId },
         data: { status: "REJECTED", parentNote: parentNote || null },
       });
+
+      // Notify child about rejection
+      if (instance.claimedById) {
+        await createNotification({
+          userId: instance.claimedById,
+          type: "chore_rejected",
+          title: "Chore not approved",
+          message: `Your chore '${instance.chore.title}' was not approved.${parentNote ? ` Note: ${parentNote}` : ""}`,
+          metadata: { instanceId, choreId: instance.choreId },
+        });
+      }
+
       return NextResponse.json(updated);
     }
 
@@ -161,6 +212,18 @@ export async function PATCH(req: NextRequest) {
         where: { id: instanceId },
         data: { status: "REDO", parentNote: parentNote || null },
       });
+
+      // Notify child about redo request
+      if (instance.claimedById) {
+        await createNotification({
+          userId: instance.claimedById,
+          type: "chore_redo",
+          title: "Redo requested",
+          message: `Please redo your chore '${instance.chore.title}'.${parentNote ? ` Note: ${parentNote}` : ""}`,
+          metadata: { instanceId, choreId: instance.choreId },
+        });
+      }
+
       return NextResponse.json(updated);
     }
 

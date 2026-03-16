@@ -16,8 +16,9 @@ model Family {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  members User[]
-  chores  Chore[]
+  members    User[]
+  chores     Chore[]
+  storeItems StoreItem[]
 }
 
 // ─── USER ───────────────────────────────────────────────
@@ -49,6 +50,9 @@ model User {
   savingsGoals       SavingsGoal[]
   investments        Investment[]
   achievements       UserAchievement[]
+  notifications      Notification[]
+  choreBids          ChoreBid[]
+  purchaseRequests   PurchaseRequest[]
 
   @@index([familyId])
 }
@@ -126,6 +130,7 @@ model ChoreInstance {
   assignedTo  User?         @relation("InstanceAssignee", fields: [assignedToId], references: [id])
   claimedBy   User?         @relation("InstanceClaimer", fields: [claimedById], references: [id])
   transactions Transaction[]
+  bids         ChoreBid[]
 
   @@index([choreId])
   @@index([claimedById])
@@ -224,6 +229,24 @@ model UserAchievement {
   @@index([userId])
 }
 
+// ─── NOTIFICATIONS ──────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // "chore_submitted", "chore_approved", "chore_rejected", "achievement_unlocked", "investment_matured", "savings_match", "streak"
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  metadata  String?  // JSON string for extra data
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
+
 // ─── INVESTMENTS ────────────────────────────────────────
 
 enum InvestmentStatus {
@@ -250,4 +273,58 @@ model Investment {
   @@index([userId])
   @@index([status])
   @@index([maturationDate])
+}
+
+// ─── CHORE BIDS (Marketplace) ───────────────────────────
+
+model ChoreBid {
+  id              String   @id @default(cuid())
+  choreInstanceId String
+  userId          String
+  amount          Float
+  message         String?
+  status          String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  choreInstance ChoreInstance @relation(fields: [choreInstanceId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([choreInstanceId])
+  @@index([userId])
+  @@index([status])
+}
+
+// ─── STORE & PURCHASES ──────────────────────────────────
+
+model StoreItem {
+  id          String   @id @default(cuid())
+  familyId    String
+  name        String
+  description String?
+  price       Float
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  family    Family            @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  purchases PurchaseRequest[]
+
+  @@index([familyId])
+}
+
+model PurchaseRequest {
+  id          String   @id @default(cuid())
+  userId      String
+  storeItemId String
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  parentNote  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storeItem StoreItem @relation(fields: [storeItemId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { NotificationBell } from "@/components/shared/notification-bell";
 
 const AVATARS = [
   "🦁", "🐯", "🐻", "🐼", "🦊", "🐰", "🐸", "🐵",
@@ -14,8 +15,11 @@ const parentLinks = [
   { href: "/parent/chores", label: "Chores", icon: "📋" },
   { href: "/parent/review", label: "Review", icon: "✅" },
   { href: "/parent/family", label: "Family", icon: "👨‍👩‍👧‍👦" },
+  { href: "/parent/store", label: "Store", icon: "🛍️" },
+  { href: "/parent/bids", label: "Bids", icon: "🏷️" },
   { href: "/parent/ledger", label: "Ledger", icon: "📒" },
   { href: "/parent/investments", label: "Invest", icon: "📈" },
+  { href: "/parent/reports", label: "Reports", icon: "📊" },
 ];
 
 const kidLinks = [
@@ -23,6 +27,8 @@ const kidLinks = [
   { href: "/kid/chores", label: "Chores", icon: "📋" },
   { href: "/kid/wallet", label: "Wallet", icon: "💰" },
   { href: "/kid/savings", label: "Savings", icon: "🎯" },
+  { href: "/kid/store", label: "Store", icon: "🛍️" },
+  { href: "/kid/marketplace", label: "Market", icon: "🏪" },
   { href: "/kid/investments", label: "Invest", icon: "🌱" },
   { href: "/kid/achievements", label: "Badges", icon: "🏅" },
 ];
@@ -78,6 +84,7 @@ export function DashboardNav({ user }: { user: DashboardUser }) {
           </div>
 
           <div className="flex items-center gap-3">
+            <NotificationBell />
             <span className="text-2xl">{avatarEmoji}</span>
             <span className="hidden text-sm font-medium text-gray-700 sm:block">
               {user.name}
