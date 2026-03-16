@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BounceOnTap } from "@/components/shared/animations";
 import { ChoreTimer } from "@/components/kid/chore-timer";
@@ -124,6 +124,9 @@ export function ChoreCard({
 }: ChoreCardProps) {
   const [optimistic, setOptimistic] = useState<ChoreInstanceData>(instance);
   const [loading, setLoading] = useState(false);
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Keep in sync if parent passes new data
   // (e.g., from a refetch or websocket update)
@@ -133,6 +136,26 @@ export function ChoreCard({
 
   const { chore } = optimistic;
   const styles = STATUS_STYLES[optimistic.status] ?? STATUS_STYLES.AVAILABLE;
+
+  // ------ Photo upload handler ------
+  const handlePhotoUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (res.ok) {
+        const { url } = await res.json();
+        setProofUrl(url);
+      }
+    } catch {
+      // silently fail — photo is optional
+    } finally {
+      setUploading(false);
+    }
+  }, []);
 
   // ------ Action handler with optimistic update ------
   const handleAction = useCallback(
@@ -173,6 +196,7 @@ export function ChoreCard({
           body.timeSpentSeconds = Math.floor(
             (Date.now() - new Date(optimistic.startedAt).getTime()) / 1000,
           );
+          if (proofUrl) body.proofPhotoUrl = proofUrl;
         }
 
         const res = await fetch("/api/chore-instances", {
@@ -197,7 +221,7 @@ export function ChoreCard({
         setLoading(false);
       }
     },
-    [loading, optimistic, instance, userId, onUpdate],
+    [loading, optimistic, instance, userId, onUpdate, proofUrl],
   );
 
   return (
@@ -286,15 +310,39 @@ export function ChoreCard({
         )}
 
         {optimistic.status === "IN_PROGRESS" && (
-          <BounceOnTap>
-            <button
-              onClick={() => handleAction("submit")}
-              disabled={loading}
-              className="rounded-xl bg-emerald-500 px-6 py-3 text-lg font-bold text-white shadow-sm transition hover:bg-emerald-600 disabled:opacity-50"
-            >
-              I'm Done!
-            </button>
-          </BounceOnTap>
+          <>
+            {/* Photo proof upload */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handlePhotoUpload}
+              className="hidden"
+            />
+            <BounceOnTap>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className={`rounded-xl border-2 px-4 py-3 text-sm font-bold transition disabled:opacity-50 ${
+                  proofUrl
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                    : "border-gray-300 bg-white text-gray-600 hover:border-sky-300"
+                }`}
+              >
+                {uploading ? "Uploading..." : proofUrl ? "Photo Added" : "Add Photo"}
+              </button>
+            </BounceOnTap>
+            <BounceOnTap>
+              <button
+                onClick={() => handleAction("submit")}
+                disabled={loading}
+                className="rounded-xl bg-emerald-500 px-6 py-3 text-lg font-bold text-white shadow-sm transition hover:bg-emerald-600 disabled:opacity-50"
+              >
+                I'm Done!
+              </button>
+            </BounceOnTap>
+          </>
         )}
 
         {optimistic.status === "SUBMITTED" && (
