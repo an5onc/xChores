@@ -127,3 +127,10 @@
     @apply font-sans;
   }
 }
+
+/* iOS safe area padding for bottom nav */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
