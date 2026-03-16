@@ -19,6 +19,8 @@ model Family {
   members    User[]
   chores     Chore[]
   storeItems StoreItem[]
+  allowanceRules AllowanceRule[]
+  familySettings FamilySettings?
 }
 
 // ─── USER ───────────────────────────────────────────────
@@ -53,6 +55,7 @@ model User {
   notifications      Notification[]
   choreBids          ChoreBid[]
   purchaseRequests   PurchaseRequest[]
+  allowanceRules     AllowanceRule[]
 
   @@index([familyId])
 }
@@ -327,4 +330,40 @@ model PurchaseRequest {
 
   @@index([userId])
   @@index([status])
+}
+
+// ─── ALLOWANCE ──────────────────────────────────────────
+
+model AllowanceRule {
+  id         String   @id @default(cuid())
+  familyId   String
+  userId     String   // which child receives
+  amount     Float
+  frequency  String   // "WEEKLY" or "MONTHLY"
+  dayOfWeek  Int?     // 0=Sun..6=Sat (for WEEKLY)
+  dayOfMonth Int?     // 1-28 (for MONTHLY)
+  isActive   Boolean  @default(true)
+  lastPaidAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([familyId])
+  @@index([userId])
+}
+
+// ─── FAMILY SETTINGS (Parent Controls) ──────────────────
+
+model FamilySettings {
+  id                  String  @id @default(cuid())
+  familyId            String  @unique
+  maxDailyEarnings    Float?  // cap per kid per day
+  maxSpendingPerDay   Float?  // spending limit per day
+  investmentApproval  Boolean @default(false) // require parent approval for investments
+  investmentMaxAmount Float?  // max investment amount without approval
+  savingsInterestRate Float?  // weekly interest rate on savings (e.g., 0.02 = 2%)
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
 }
