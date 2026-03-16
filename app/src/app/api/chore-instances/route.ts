@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { checkAchievements } from "@/lib/achievements";
 
 // GET: List chore instances for the user
 export async function GET() {
@@ -135,7 +136,10 @@ export async function PATCH(req: NextRequest) {
         }),
       ]);
 
-      return NextResponse.json(updated);
+      // Check for newly unlocked achievements
+      const newAchievements = await checkAchievements(instance.claimedById!);
+
+      return NextResponse.json({ ...updated, newAchievements });
     }
 
     case "reject": {
