@@ -1,6 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import {
+  FadeIn,
+  StaggerContainer,
+  StaggerItem,
+} from "@/components/shared/animations";
 
 const AVATARS = [
   "🦁", "🐯", "🐻", "🐼", "🦊", "🐰", "🐸", "🐵",
@@ -58,84 +63,104 @@ export default function ParentInvestmentsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Manage Investments</h1>
+      {/* Header */}
+      <FadeIn>
+        <h1 className="text-2xl font-bold text-gray-900">Manage Investments</h1>
+      </FadeIn>
 
+      {/* Ready for Payout */}
       {ready.length > 0 && (
-        <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-6">
-          <h2 className="text-lg font-bold text-amber-800">Ready for Payout ({ready.length})</h2>
-          <div className="mt-4 space-y-3">
-            {ready.map((inv) => (
-              <div key={inv.id} className="flex items-center justify-between rounded-xl bg-white p-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">{AVATARS[inv.user.avatarId - 1]}</span>
-                  <div>
-                    <p className="font-bold text-gray-900">{inv.user.name}</p>
-                    <p className="text-sm text-gray-500">
-                      Invested ${inv.principalAmount.toFixed(2)} for {inv.lockDays} days
-                    </p>
+        <FadeIn delay={0.1}>
+          <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-6">
+            <h2 className="text-lg font-bold text-amber-800">Ready for Payout ({ready.length})</h2>
+            <StaggerContainer className="mt-4 space-y-3" delay={0.05}>
+              {ready.map((inv) => (
+                <StaggerItem key={inv.id}>
+                  <div className="flex items-center justify-between rounded-xl bg-white p-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">{AVATARS[inv.user.avatarId - 1]}</span>
+                      <div>
+                        <p className="font-bold text-gray-900">{inv.user.name}</p>
+                        <p className="text-sm text-gray-500">
+                          Invested ${inv.principalAmount.toFixed(2)} for {inv.lockDays} days
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setReturn(inv.id)}
+                      className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                    >
+                      Set Return
+                    </button>
                   </div>
-                </div>
-                <button
-                  onClick={() => setReturn(inv.id)}
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-                >
-                  Set Return
-                </button>
-              </div>
-            ))}
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
           </div>
-        </div>
+        </FadeIn>
       )}
 
+      {/* Active Investments */}
       {active.length > 0 && (
-        <div className="rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-bold text-gray-900">Active Investments</h2>
-          <div className="mt-4 space-y-3">
-            {active.filter((i) => new Date(i.maturationDate) > new Date()).map((inv) => (
-              <div key={inv.id} className="flex items-center justify-between rounded-xl border border-gray-100 p-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{AVATARS[inv.user.avatarId - 1]}</span>
-                  <div>
-                    <p className="font-medium text-gray-900">{inv.user.name}</p>
-                    <p className="text-sm text-gray-500">
-                      ${inv.principalAmount.toFixed(2)} &middot; {inv.lockDays} days &middot; Matures {new Date(inv.maturationDate).toLocaleDateString()}
-                    </p>
+        <FadeIn delay={0.15}>
+          <div className="rounded-2xl bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-gray-900">Active Investments</h2>
+            <StaggerContainer className="mt-4 space-y-3" delay={0.05}>
+              {active.filter((i) => new Date(i.maturationDate) > new Date()).map((inv) => (
+                <StaggerItem key={inv.id}>
+                  <div className="flex items-center justify-between rounded-xl border border-gray-100 p-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{AVATARS[inv.user.avatarId - 1]}</span>
+                      <div>
+                        <p className="font-medium text-gray-900">{inv.user.name}</p>
+                        <p className="text-sm text-gray-500">
+                          ${inv.principalAmount.toFixed(2)} &middot; {inv.lockDays} days &middot; Matures {new Date(inv.maturationDate).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-medium text-purple-600">Growing...</span>
                   </div>
-                </div>
-                <span className="text-sm font-medium text-purple-600">Growing...</span>
-              </div>
-            ))}
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
           </div>
-        </div>
+        </FadeIn>
       )}
 
+      {/* Past Investments */}
       {matured.length > 0 && (
-        <div className="rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-bold text-gray-900">Past Investments</h2>
-          <div className="mt-4 space-y-3">
-            {matured.map((inv) => (
-              <div key={inv.id} className="flex items-center justify-between rounded-xl border border-gray-100 p-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{AVATARS[inv.user.avatarId - 1]}</span>
-                  <div>
-                    <p className="font-medium text-gray-900">{inv.user.name}</p>
-                    <p className="text-sm text-gray-500">
-                      Invested ${inv.principalAmount.toFixed(2)} → Returned ${inv.returnAmount?.toFixed(2)}
-                    </p>
+        <FadeIn delay={0.2}>
+          <div className="rounded-2xl bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-gray-900">Past Investments</h2>
+            <StaggerContainer className="mt-4 space-y-3" delay={0.05}>
+              {matured.map((inv) => (
+                <StaggerItem key={inv.id}>
+                  <div className="flex items-center justify-between rounded-xl border border-gray-100 p-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{AVATARS[inv.user.avatarId - 1]}</span>
+                      <div>
+                        <p className="font-medium text-gray-900">{inv.user.name}</p>
+                        <p className="text-sm text-gray-500">
+                          Invested ${inv.principalAmount.toFixed(2)} → Returned ${inv.returnAmount?.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-medium text-emerald-600">Paid Out</span>
                   </div>
-                </div>
-                <span className="text-sm font-medium text-emerald-600">Paid Out</span>
-              </div>
-            ))}
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
           </div>
-        </div>
+        </FadeIn>
       )}
 
       {investments.length === 0 && (
-        <div className="rounded-2xl bg-white p-12 text-center shadow-sm">
-          <p className="text-5xl">🌱</p>
-          <p className="mt-4 text-lg text-gray-500">No investments yet. Kids can invest from their wallet!</p>
-        </div>
+        <FadeIn delay={0.1}>
+          <div className="rounded-2xl bg-white p-12 text-center shadow-sm">
+            <p className="text-5xl">🌱</p>
+            <p className="mt-4 text-lg text-gray-500">No investments yet. Kids can invest from their wallet!</p>
+          </div>
+        </FadeIn>
       )}
     </div>
   );
