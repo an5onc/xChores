@@ -62,6 +62,10 @@ export async function POST(req: NextRequest) {
 
   // Save allocation
   if (saveAmount > 0 && savingsGoalId) {
+    const goal = await db.savingsGoal.findUnique({
+      where: { id: savingsGoalId },
+    });
+
     operations.push(
       db.wallet.update({
         where: { userId: session.user.id },
@@ -85,6 +89,49 @@ export async function POST(req: NextRequest) {
         },
       })
     );
+
+    // Parent match: auto-credit matched funds
+    if (goal?.parentMatchRate && goal.parentMatchRate > 0) {
+      const matchAmount = parseFloat((saveAmount * goal.parentMatchRate).toFixed(2));
+      if (matchAmount > 0) {
+        operations.push(
+          db.wallet.update({
+            where: { userId: session.user.id },
+            data: { savedBalance: { increment: matchAmount } },
+          })
+        );
+        operations.push(
+          db.savingsGoal.update({
+            where: { id: savingsGoalId },
+            data: { currentAmount: { increment: matchAmount } },
+          })
+        );
+        operations.push(
+          db.transaction.create({
+            data: {
+              walletId: wallet.id,
+              type: "MATCH",
+              amount: matchAmount,
+              description: `Parent match (${goal.parentMatchRate}x) on savings`,
+              savingsGoalId,
+            },
+          })
+        );
+      }
+    }
+
+    // Check if goal is now completed
+    if (goal) {
+      const newTotal = goal.currentAmount + saveAmount + (goal.parentMatchRate ? saveAmount * goal.parentMatchRate : 0);
+      if (newTotal >= goal.targetAmount && !goal.isCompleted) {
+        operations.push(
+          db.savingsGoal.update({
+            where: { id: savingsGoalId },
+            data: { isCompleted: true },
+          })
+        );
+      }
+    }
   }
 
   // Invest allocation
