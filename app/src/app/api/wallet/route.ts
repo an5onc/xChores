@@ -168,13 +168,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Spend stays in available (already deducted, record transaction)
+  // Spend: already deducted from availableBalance via total decrement above — just record the transaction
   if (spendAmount > 0) {
-    // Re-add spend to available since it's "spending money" (stays accessible)
     operations.push(
-      db.wallet.update({
-        where: { userId: session.user.id },
-        data: { availableBalance: { increment: spendAmount } },
+      db.transaction.create({
+        data: {
+          walletId: wallet.id,
+          type: "SPENDING",
+          amount: spendAmount,
+          description: "Spent from wallet",
+        },
       })
     );
   }

@@ -4,7 +4,7 @@ import pg from "pg";
 import { hash } from "bcryptjs";
 
 const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL || "postgresql://ansoncordeiro@localhost:5432/xchores",
+  connectionString: process.env.DATABASE_URL || "postgresql://xchores:xchores_dev@localhost:5432/xchores",
 });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
