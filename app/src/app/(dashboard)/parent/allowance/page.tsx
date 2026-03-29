@@ -36,7 +36,7 @@ export default function ParentAllowancePage() {
       fetch("/api/family/children").then((r) => r.json()),
     ]).then(([ruleData, kidData]) => {
       setRules(Array.isArray(ruleData) ? ruleData : []);
-      setKids(Array.isArray(kidData) ? kidData : []);
+      setKids(Array.isArray(kidData?.children) ? kidData.children : []);
       setLoading(false);
     });
   }, []);
